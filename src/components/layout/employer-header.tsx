@@ -233,7 +233,7 @@ export function EmployerHeader() {
                 logoutRedirectPath="/employer"
               />
             </>
-          ) : (
+          ) : mounted ? (
             <Sheet open={open} onOpenChange={setOpen}>
               <SheetTrigger asChild>
                 <Button
@@ -278,6 +278,15 @@ export function EmployerHeader() {
                 </div>
               </SheetContent>
             </Sheet>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Open navigation"
+              disabled
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
           )}
         </div>
       </div>

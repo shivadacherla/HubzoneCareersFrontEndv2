@@ -223,7 +223,7 @@ export function ApplicantHeader() {
                 profilePicture={userData.profilePicture}
               />
             </>
-          ) : (
+          ) : mounted ? (
             <Sheet open={open} onOpenChange={setOpen}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" aria-label="Open navigation">
@@ -260,6 +260,10 @@ export function ApplicantHeader() {
                 </div>
               </SheetContent>
             </Sheet>
+          ) : (
+            <Button variant="ghost" size="icon" aria-label="Open navigation" disabled>
+              <Menu className="h-5 w-5" />
+            </Button>
           )}
         </div>
        </div>
