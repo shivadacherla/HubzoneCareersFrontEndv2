@@ -27,6 +27,7 @@ import { TypingText } from "@/components/ui/typing-text";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Link from "next/link";
+import { submitApplicantContactForm } from "@/lib/api/contact-api";
 
 type FormData = {
   firstName: string;
@@ -38,7 +39,9 @@ type FormData = {
   inquiryType: string;
 };
 
-type FormErrors = Partial<Record<keyof FormData, string>>;
+type FormErrors = Partial<Record<keyof FormData, string>> & {
+  submit?: string;
+};
 
 export default function ApplicantContact() {
   const [mounted, setMounted] = useState(false);
@@ -93,14 +96,29 @@ export default function ApplicantContact() {
 
     if (!formData.email.trim()) {
       newErrors.email = "Email is required";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Please enter a valid email address";
+    } else {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email.trim())) {
+        newErrors.email = "Please enter a valid email address";
+      } else if (formData.email.trim().length > 100) {
+        newErrors.email = "Email address is too long (maximum 100 characters)";
+      }
     }
 
     if (!formData.phone.trim()) {
       newErrors.phone = "Phone number is required";
-    } else if (!/^[\d\s\-\+\(\)]+$/.test(formData.phone)) {
-      newErrors.phone = "Please enter a valid phone number";
+    } else {
+      // Remove all non-digit characters for validation
+      const digitsOnly = formData.phone.replace(/\D/g, "");
+      if (digitsOnly.length === 0) {
+        newErrors.phone = "Phone number must contain at least one digit";
+      } else if (digitsOnly.length < 10) {
+        newErrors.phone = "Phone number must be exactly 10 digits";
+      } else if (digitsOnly.length > 10) {
+        newErrors.phone = "Phone number cannot exceed 10 digits";
+      } else if (!/^\d{10}$/.test(digitsOnly)) {
+        newErrors.phone = "Please enter a valid 10-digit phone number";
+      }
     }
 
     if (!formData.inquiryType) {
@@ -122,19 +140,43 @@ export default function ApplicantContact() {
     if (!validateForm()) return;
 
     setIsSubmitting(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setIsSubmitting(false);
-    setIsSubmitted(true);
-
-    // TODO: Replace with actual API call
-    // await submitContactForm(formData);
+    try {
+      await submitApplicantContactForm({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: formData.phone,
+        subject: formData.subject,
+        message: formData.message,
+        inquiryType: formData.inquiryType,
+      });
+      setIsSubmitted(true);
+    } catch (error) {
+      setErrors({
+        submit: error instanceof Error ? error.message : "Failed to submit form. Please try again.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleChange = (field: keyof FormData, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    let processedValue = value;
+    
+    // Handle phone number formatting and validation
+    if (field === "phone") {
+      // Remove all non-digit characters
+      const digitsOnly = value.replace(/\D/g, "");
+      // Limit to 10 digits
+      processedValue = digitsOnly.slice(0, 10);
+    }
+    
+    setFormData((prev) => ({ ...prev, [field]: processedValue }));
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
+    }
+    if (errors.submit) {
+      setErrors((prev) => ({ ...prev, submit: undefined }));
     }
   };
 
@@ -506,6 +548,7 @@ export default function ApplicantContact() {
                     onChange={(e) => handleChange("email", e.target.value)}
                     className={errors.email ? "border-destructive" : ""}
                     placeholder="john.doe@example.com"
+                    maxLength={100}
                   />
                   {errors.email && (
                     <p className="text-xs text-destructive flex items-center gap-1">
@@ -526,7 +569,9 @@ export default function ApplicantContact() {
                     value={formData.phone}
                     onChange={(e) => handleChange("phone", e.target.value)}
                     className={errors.phone ? "border-destructive" : ""}
-                    placeholder="+1 (555) 123-4567"
+                    placeholder="5551234567"
+                    maxLength={10}
+                    pattern="[0-9]{10}"
                   />
                   {errors.phone && (
                     <p className="text-xs text-destructive flex items-center gap-1">
@@ -534,6 +579,9 @@ export default function ApplicantContact() {
                       {errors.phone}
                     </p>
                   )}
+                  <p className="text-xs text-muted-foreground">
+                    Enter 10-digit phone number (digits only)
+                  </p>
                 </div>
 
                 {/* Inquiry Type */}
@@ -593,6 +641,16 @@ export default function ApplicantContact() {
                     {formData.message.length}/500 characters
                   </p>
                 </div>
+
+                {/* Submit Error */}
+                {errors.submit && (
+                  <div className="rounded-md bg-destructive/10 border border-destructive/20 p-3">
+                    <p className="text-sm text-destructive flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4" />
+                      {errors.submit}
+                    </p>
+                  </div>
+                )}
 
                 {/* Submit Button */}
                 <Button
