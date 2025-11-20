@@ -29,6 +29,7 @@ import { TypingText } from "@/components/ui/typing-text";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Link from "next/link";
+import { submitEmployerContactForm } from "@/lib/api/contact-api";
 
 type FormData = {
   firstName: string;
@@ -36,13 +37,14 @@ type FormData = {
   email: string;
   phone: string;
   organizationName: string;
-  organizationSize: string;
   subject: string;
   message: string;
   inquiryType: string;
 };
 
-type FormErrors = Partial<Record<keyof FormData, string>>;
+type FormErrors = Partial<Record<keyof FormData, string>> & {
+  submit?: string;
+};
 
 export default function EmployerContact() {
   const [mounted, setMounted] = useState(false);
@@ -52,7 +54,6 @@ export default function EmployerContact() {
     email: "",
     phone: "",
     organizationName: "",
-    organizationSize: "",
     subject: "",
     message: "",
     inquiryType: "",
@@ -86,13 +87,6 @@ export default function EmployerContact() {
     "How do I manage team access?",
   ];
 
-  const organizationSizes = [
-    "1-50 employees",
-    "51-100 employees",
-    "101-200 employees",
-    "201-500 employees",
-    "500+ employees",
-  ];
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
@@ -107,29 +101,40 @@ export default function EmployerContact() {
 
     if (!formData.email.trim()) {
       newErrors.email = "Email is required";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Please enter a valid email address";
     } else {
-      // Check for work email (not generic domains)
-      const genericDomains = ["gmail.com", "yahoo.com", "outlook.com", "hotmail.com"];
-      const domain = formData.email.split("@")[1]?.toLowerCase();
-      if (domain && genericDomains.includes(domain)) {
-        newErrors.email = "Please use your work email address";
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email.trim())) {
+        newErrors.email = "Please enter a valid email address";
+      } else if (formData.email.trim().length > 100) {
+        newErrors.email = "Email address is too long (maximum 100 characters)";
+      } else {
+        // Check for work email (not generic domains)
+        const genericDomains = ["gmail.com", "yahoo.com", "outlook.com", "hotmail.com"];
+        const domain = formData.email.split("@")[1]?.toLowerCase();
+        if (domain && genericDomains.includes(domain)) {
+          newErrors.email = "Please use your work email address";
+        }
       }
     }
 
     if (!formData.phone.trim()) {
       newErrors.phone = "Phone number is required";
-    } else if (!/^[\d\s\-\+\(\)]+$/.test(formData.phone)) {
-      newErrors.phone = "Please enter a valid phone number";
+    } else {
+      // Remove all non-digit characters for validation
+      const digitsOnly = formData.phone.replace(/\D/g, "");
+      if (digitsOnly.length === 0) {
+        newErrors.phone = "Phone number must contain at least one digit";
+      } else if (digitsOnly.length < 10) {
+        newErrors.phone = "Phone number must be exactly 10 digits";
+      } else if (digitsOnly.length > 10) {
+        newErrors.phone = "Phone number cannot exceed 10 digits";
+      } else if (!/^\d{10}$/.test(digitsOnly)) {
+        newErrors.phone = "Please enter a valid 10-digit phone number";
+      }
     }
 
     if (!formData.organizationName.trim()) {
       newErrors.organizationName = "Organization name is required";
-    }
-
-    if (!formData.organizationSize) {
-      newErrors.organizationSize = "Please select organization size";
     }
 
     if (!formData.inquiryType) {
@@ -151,19 +156,45 @@ export default function EmployerContact() {
     if (!validateForm()) return;
 
     setIsSubmitting(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setIsSubmitting(false);
-    setIsSubmitted(true);
-
-    // TODO: Replace with actual API call
-    // await submitContactForm(formData);
+    setErrors({}); // Clear previous errors
+    try {
+      await submitEmployerContactForm({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: formData.phone,
+        organizationName: formData.organizationName,
+        subject: formData.subject,
+        message: formData.message,
+        inquiryType: formData.inquiryType,
+      });
+      setIsSubmitted(true);
+    } catch (error) {
+      setErrors({
+        submit: error instanceof Error ? error.message : "Failed to submit form. Please try again.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleChange = (field: keyof FormData, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    let processedValue = value;
+    
+    // Handle phone number formatting and validation
+    if (field === "phone") {
+      // Remove all non-digit characters
+      const digitsOnly = value.replace(/\D/g, "");
+      // Limit to 10 digits
+      processedValue = digitsOnly.slice(0, 10);
+    }
+    
+    setFormData((prev) => ({ ...prev, [field]: processedValue }));
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
+    }
+    if (errors.submit) {
+      setErrors((prev) => ({ ...prev, submit: undefined }));
     }
   };
 
@@ -569,37 +600,6 @@ export default function EmployerContact() {
                   )}
                 </div>
 
-                {/* Organization Size */}
-                <div className="space-y-2">
-                  <Label htmlFor="organizationSize">
-                    Organization Size <span className="text-destructive">*</span>
-                  </Label>
-                  <Select
-                    value={formData.organizationSize}
-                    onValueChange={(value) => handleChange("organizationSize", value)}
-                  >
-                    <SelectTrigger
-                      id="organizationSize"
-                      className={errors.organizationSize ? "border-destructive" : ""}
-                    >
-                      <SelectValue placeholder="Select organization size" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {organizationSizes.map((size) => (
-                        <SelectItem key={size} value={size}>
-                          {size}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.organizationSize && (
-                    <p className="text-xs text-destructive flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3" />
-                      {errors.organizationSize}
-                    </p>
-                  )}
-                </div>
-
                 {/* Email */}
                 <div className="space-y-2">
                   <Label htmlFor="email">
@@ -612,6 +612,7 @@ export default function EmployerContact() {
                     onChange={(e) => handleChange("email", e.target.value)}
                     className={errors.email ? "border-destructive" : ""}
                     placeholder="john.doe@yourcompany.com"
+                    maxLength={100}
                   />
                   {errors.email && (
                     <p className="text-xs text-destructive flex items-center gap-1">
@@ -635,7 +636,9 @@ export default function EmployerContact() {
                     value={formData.phone}
                     onChange={(e) => handleChange("phone", e.target.value)}
                     className={errors.phone ? "border-destructive" : ""}
-                    placeholder="+1 (555) 123-4567"
+                    placeholder="5551234567"
+                    maxLength={10}
+                    pattern="[0-9]{10}"
                   />
                   {errors.phone && (
                     <p className="text-xs text-destructive flex items-center gap-1">
@@ -643,6 +646,9 @@ export default function EmployerContact() {
                       {errors.phone}
                     </p>
                   )}
+                  <p className="text-xs text-muted-foreground">
+                    Enter 10-digit phone number (digits only)
+                  </p>
                 </div>
 
                 {/* Inquiry Type */}
@@ -702,6 +708,16 @@ export default function EmployerContact() {
                     {formData.message.length}/500 characters
                   </p>
                 </div>
+
+                {/* Submit Error */}
+                {errors.submit && (
+                  <div className="rounded-md bg-destructive/10 border border-destructive/20 p-3">
+                    <p className="text-sm text-destructive flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4" />
+                      {errors.submit}
+                    </p>
+                  </div>
+                )}
 
                 {/* Submit Button */}
                 <Button

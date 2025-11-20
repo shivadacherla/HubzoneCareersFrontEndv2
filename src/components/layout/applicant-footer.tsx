@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -13,6 +14,8 @@ import {
 } from "@/components/ui/dialog";
 import { PrivacyPolicy } from "@/components/legal/privacy-policy";
 import { TermsOfService } from "@/components/legal/terms-of-service";
+import { subscribeToNewsletter } from "@/lib/api/subscriber-api";
+import { CheckCircle2, AlertCircle, Mail, Sparkles } from "lucide-react";
 
 const APPLICANT_FOOTER_LINKS = [
   {
@@ -45,18 +48,43 @@ export function ApplicantFooter() {
   const [termsOpen, setTermsOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [alreadySubscribed, setAlreadySubscribed] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  function handleNewsletterSubmit(e: React.FormEvent) {
+  async function handleNewsletterSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
+    setError(null);
+    setAlreadySubscribed(false);
+    
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError("Please enter a valid email address");
+      return;
+    }
     
     setIsSubmitting(true);
-    // TODO: Replace with real newsletter subscription API call
-    setTimeout(() => {
-      alert("Thank you for subscribing! Check your email for confirmation.");
-      setEmail("");
+    try {
+      const response = await subscribeToNewsletter(email);
+      if (response.alreadySubscribed) {
+        setAlreadySubscribed(true);
+        setEmail("");
+        // Hide message after 5 seconds
+        setTimeout(() => {
+          setAlreadySubscribed(false);
+        }, 5000);
+      } else {
+        setShowSuccess(true);
+        setEmail("");
+        // Hide success message after 5 seconds
+        setTimeout(() => {
+          setShowSuccess(false);
+        }, 5000);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to subscribe. Please try again.");
+    } finally {
       setIsSubmitting(false);
-    }, 500);
+    }
   }
 
   return (
@@ -135,27 +163,101 @@ export function ApplicantFooter() {
                 Subscribe for weekly updates. No spams ever!
               </p>
             </div>
-            <form
-              onSubmit={handleNewsletterSubmit}
-              className="flex flex-1 flex-col gap-3 md:flex-row md:items-center md:gap-3"
-            >
-              <Input
-                type="email"
-                placeholder="Your email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="h-10 flex-1 text-sm"
-                required
-              />
-              <Button
-                type="submit"
-                size="default"
-                className="w-full md:w-auto md:whitespace-nowrap"
-                disabled={isSubmitting}
+            <div className="flex-1 space-y-2">
+              <form
+                onSubmit={handleNewsletterSubmit}
+                className="flex flex-1 flex-col gap-3 md:flex-row md:items-center md:gap-3"
               >
-                {isSubmitting ? "Subscribing..." : "Subscribe"}
-              </Button>
-            </form>
+                <div className="relative flex-1">
+                  <Input
+                    type="email"
+                    placeholder="Your email address"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      setError(null);
+                      setShowSuccess(false);
+                      setAlreadySubscribed(false);
+                    }}
+                    className={`h-10 flex-1 text-sm pr-10 ${
+                      error ? "border-destructive" : showSuccess || alreadySubscribed ? "border-green-500" : ""
+                    }`}
+                    required
+                    disabled={isSubmitting}
+                  />
+                  {(showSuccess || alreadySubscribed) && (
+                    <CheckCircle2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-green-500" />
+                  )}
+                </div>
+                <Button
+                  type="submit"
+                  size="default"
+                  className="w-full md:w-auto md:whitespace-nowrap"
+                  disabled={isSubmitting || showSuccess || alreadySubscribed}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Sparkles className="mr-2 h-4 w-4 animate-pulse" />
+                      Subscribing...
+                    </>
+                  ) : showSuccess ? (
+                    <>
+                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                      Subscribed!
+                    </>
+                  ) : alreadySubscribed ? (
+                    <>
+                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                      Subscribed!
+                    </>
+                  ) : (
+                    <>
+                      <Mail className="mr-2 h-4 w-4" />
+                      Subscribe
+                    </>
+                  )}
+                </Button>
+              </form>
+              <AnimatePresence mode="wait">
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="flex items-center gap-2 rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2"
+                  >
+                    <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0" />
+                    <p className="text-xs text-destructive">{error}</p>
+                  </motion.div>
+                )}
+                {showSuccess && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="flex items-center gap-2 rounded-md bg-green-500/10 border border-green-500/20 px-3 py-2"
+                  >
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    <p className="text-xs text-green-600 dark:text-green-400 font-medium">
+                      Thank you for subscribing!
+                    </p>
+                  </motion.div>
+                )}
+                {alreadySubscribed && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="flex items-center gap-2 rounded-md bg-green-500/10 border border-green-500/20 px-3 py-2"
+                  >
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    <p className="text-xs text-green-600 dark:text-green-400 font-medium">
+                      Email already subscribed!
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </div>
       </footer>
@@ -186,4 +288,3 @@ export function ApplicantFooter() {
     </>
   );
 }
-

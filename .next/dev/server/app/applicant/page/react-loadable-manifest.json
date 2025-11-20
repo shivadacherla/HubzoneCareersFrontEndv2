@@ -1,9 +1,9 @@
 {
-  "[project]/Documents/Cursor/HubzoneCareersFrontEndv2/node_modules/lottie-react/build/index.umd.js [app-client] (ecmascript, next/dynamic entry)": {
-    "id": "[project]/Documents/Cursor/HubzoneCareersFrontEndv2/node_modules/lottie-react/build/index.umd.js [app-client] (ecmascript, next/dynamic entry)",
+  "[project]/node_modules/lottie-react/build/index.umd.js [app-client] (ecmascript, next/dynamic entry)": {
+    "id": "[project]/node_modules/lottie-react/build/index.umd.js [app-client] (ecmascript, next/dynamic entry)",
     "files": [
-      "static/chunks/997eb_52ec799d._.js",
-      "static/chunks/997eb_lottie-react_build_index_umd_3f5d6ce6.js"
+      "static/chunks/node_modules_7f24c5d4._.js",
+      "static/chunks/node_modules_lottie-react_build_index_umd_c04e344a.js"
     ]
   }
 }

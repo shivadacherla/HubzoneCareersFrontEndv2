@@ -1,22 +1,10 @@
 {
   "app": {
-    "[project]/Documents/Cursor/HubzoneCareersFrontEndv2/src/app/applicant/ai-copilot/page": [
+    "[project]/src/app/applicant/contact/page": [
       "static/media/caa3a2e1cccd8315-s.p.853070df.woff2",
       "static/media/797e433ab948586e-s.p.dbea232f.woff2"
     ],
-    "[project]/Documents/Cursor/HubzoneCareersFrontEndv2/src/app/applicant/careers/page": [
-      "static/media/caa3a2e1cccd8315-s.p.853070df.woff2",
-      "static/media/797e433ab948586e-s.p.dbea232f.woff2"
-    ],
-    "[project]/Documents/Cursor/HubzoneCareersFrontEndv2/src/app/applicant/companies/page": [
-      "static/media/caa3a2e1cccd8315-s.p.853070df.woff2",
-      "static/media/797e433ab948586e-s.p.dbea232f.woff2"
-    ],
-    "[project]/Documents/Cursor/HubzoneCareersFrontEndv2/src/app/applicant/page": [
-      "static/media/caa3a2e1cccd8315-s.p.853070df.woff2",
-      "static/media/797e433ab948586e-s.p.dbea232f.woff2"
-    ],
-    "[project]/Documents/Cursor/HubzoneCareersFrontEndv2/src/app/page": [
+    "[project]/src/app/applicant/page": [
       "static/media/caa3a2e1cccd8315-s.p.853070df.woff2",
       "static/media/797e433ab948586e-s.p.dbea232f.woff2"
     ]

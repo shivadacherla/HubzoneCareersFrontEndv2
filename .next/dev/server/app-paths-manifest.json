@@ -1,7 +1,4 @@
 {
-  "/applicant/ai-copilot/page": "app/applicant/ai-copilot/page.js",
-  "/applicant/careers/page": "app/applicant/careers/page.js",
-  "/applicant/companies/page": "app/applicant/companies/page.js",
-  "/applicant/page": "app/applicant/page.js",
-  "/page": "app/page.js"
+  "/applicant/contact/page": "app/applicant/contact/page.js",
+  "/applicant/page": "app/applicant/page.js"
 }
